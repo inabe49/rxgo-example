@@ -19,7 +19,7 @@ func ToCancelable(observable rxgo.Observable) (rxgo.Observable, func()) {
 		}
 
 		return i, nil
-	}), cancel
+	}, rxgo.WithErrorStrategy(rxgo.StopOnError)), cancel
 }
 
 func main() {
@@ -28,6 +28,7 @@ func main() {
 
 	// ctx, cancel := context.WithCancel(context.Background())
 
+	// observe 開始前に与えた値で Foreach は読み出されないことを確認する
 	ch <- rxgo.Of(1)
 	ch <- rxgo.Of(2)
 	ch <- rxgo.Of(3)
