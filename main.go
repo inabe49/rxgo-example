@@ -7,19 +7,19 @@ import (
 	"time"
 )
 
-func AsCancelable(observable rxgo.Observable) (func(), rxgo.Observable) {
+func ToCancelable(observable rxgo.Observable) (rxgo.Observable, func()) {
 	canceled := false
 	cancel := func() {
 		canceled = true
 	}
 
-	return cancel, observable.Map(func(ctx context.Context, i interface{}) (interface{}, error) {
+	return observable.Map(func(ctx context.Context, i interface{}) (interface{}, error) {
 		if canceled {
 			return nil, fmt.Errorf("canceled")
 		}
 
 		return i, nil
-	})
+	}), cancel
 }
 
 func main() {
@@ -63,12 +63,33 @@ func main() {
 		})
 	}()
 
-	for item := range observable.Map(func(ctx context.Context, i interface{}) (interface{}, error) {
-		return nil, fmt.Errorf("error")
-	}).Observe() {
-		println(item.E)
-	}
-	observable.Observe()
+	obs, cancel := ToCancelable(observable)
+
+	go func() {
+		<-time.After(1 * time.Second)
+
+		cancel()
+	}()
+
+	go func() {
+		// Observer 3
+		obs.ForEach(func(i interface{}) {
+			println("Observer 3 : value : ", i.(int))
+		}, func(err error) {
+			println("Observer 3 : error : ", err.Error())
+		}, func() {
+			println("Observer 3 : finish")
+		})
+	}()
+
+	/*
+		for item := range observable.Map(func(ctx context.Context, i interface{}) (interface{}, error) {
+			return nil, fmt.Errorf("error")
+		}).Observe() {
+			println(item.E)
+		}
+		observable.Observe()
+	*/
 
 	/*
 		for item := range observable.Observe() {
