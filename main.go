@@ -2,24 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/reactivex/rxgo/v2"
 	"time"
 )
 
 func ToCancelable(observable rxgo.Observable) (rxgo.Observable, func()) {
-	canceled := false
-	cancel := func() {
-		canceled = true
-	}
+	parent := context.Background()
+	ctx, cancel := context.WithCancel(parent)
 
 	return observable.Map(func(ctx context.Context, i interface{}) (interface{}, error) {
-		if canceled {
-			return nil, fmt.Errorf("canceled")
-		}
-
 		return i, nil
-	}, rxgo.WithErrorStrategy(rxgo.StopOnError)), cancel
+	}, rxgo.WithContext(ctx)), cancel
 }
 
 func main() {
